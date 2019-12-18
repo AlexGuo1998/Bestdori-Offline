@@ -5,6 +5,7 @@
 # Date:        2019/12/16
 # ==============================================
 
+import os
 import time
 import requests
 import pickle
@@ -15,6 +16,7 @@ class CacheControl:
     def __init__(self):
         self.path = ''
         self.lastRead = 0  # for resource cleaning
+        self.lastCheck = 0
         self.staleTs = 0  # for updating
         self.lastModified = 0
         self.etag = None
@@ -31,6 +33,7 @@ class RequestManager:
         self.cacheDir = cacheDir
         if not (self.cacheDir.endswith('/') or self.cacheDir.endswith('\\')):
             self.cacheDir += '/'
+        os.makedirs(self.cacheDir, exist_ok=True)
         data = {}
         try:
             with open(self.cacheIndex, 'rb') as f:
@@ -43,10 +46,9 @@ class RequestManager:
         self.cacheControl: typing.Dict[str, CacheControl] = data.get('cache-control', {})
         self.cacheControlLock = None  # TODO
 
-    def get(self, path, cacheable=True, session=False):
+    def get(self, path, cacheable=True, session=False, force=False):
         resourceName = self._pathToResourceName(path)
-        if cacheable:
-            resourceName = self._pathToResourceName(path)
+        if cacheable and not force:
             cacheControl = self.cacheControl.get(resourceName)
             if cacheControl is not None and cacheControl.path == path:
                 stale = cacheControl.touchAndTestStale()
@@ -66,12 +68,13 @@ class RequestManager:
         content = r.content
         if cacheable:
             # TODO parse header
-            r.headers
+            # r.headers
             filename = self.cacheDir + resourceName
             with open(filename, 'wb') as f:
                 f.write(content)
             cacheControl = CacheControl()
             cacheControl.path = path
+            self.cacheControl[resourceName] = cacheControl
         return content
 
         pass
@@ -86,3 +89,20 @@ class RequestManager:
             o = 's@'
         o += path.replace('/', '@')
         return o
+
+    def saveCacheIndex(self):
+        data = {
+            'session': self.session,
+            'cache-control': self.cacheControl,
+        }
+        with open(self.cacheIndex, 'wb') as f:
+            pickle.dump(data, f)
+
+_manager = None
+
+
+def getManager() -> RequestManager:
+    global _manager
+    if _manager is None:
+        _manager = RequestManager('cache-index.pickle', 'cache/')
+    return _manager
