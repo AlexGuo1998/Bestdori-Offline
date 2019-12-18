@@ -7,6 +7,7 @@
 
 import json
 import typing
+from numbers import Real
 
 import request_manager
 
@@ -58,10 +59,42 @@ class Card:
     @property
     def _info(self) -> dict:
         return _CardDataManager.getCardInfo(self.id)
+        # {'characterId': 1, 'rarity': 4, 'attribute': 'powerful', 'levelLimit': 50, 'resourceSetName': 'res001004',
+        #  'prefix': ['みんなで遊園地！', 'Theme Park Fun!', '大家去遊樂園！', '大家在游乐园！', '모두 함께 놀이동산!'],
+        #  'releasedAt': ['1489626000000', '1489658400000', '1489629600000', '1489629600000', '1489626000000'],
+        #  'skillId': 7,
+        #  'type': 'permanent', 'stat': {'1': {'performance': 4032, 'technique': 3024, 'visual': 2419},
+        #                                '60': {'performance': 12177, 'technique': 9132, 'visual': 7308},
+        #                                'episodes': [{'performance': 250, 'technique': 250, 'visual': 250},
+        #                                             {'performance': 600, 'technique': 600, 'visual': 600}],
+        #                                'training': {'performance': 400, 'technique': 400, 'visual': 400}}}
 
     @property
     def rarity(self) -> int:
         return self._info['rarity']
+
+    @property
+    def character(self) -> int:
+        return self._info['characterId']
+
+    @property
+    def band(self) -> int:
+        # 0, 1, 2, 3, 4
+        band = (self.character - 1) // 5
+        if 0 <= band <= 4:
+            return band
+        return -1
+
+    @property
+    def attribute(self) -> int:
+        # 0, 1, 2, 3
+        attribute = self._info['attribute']
+        return {
+            'powerful': 0,
+            'cool': 1,
+            'happy': 2,
+            'pure': 3,
+        }.get(attribute, -1)
 
     @property
     def train(self) -> bool:
@@ -85,7 +118,7 @@ class Card:
         self._train = x
 
     @property
-    def attrs(self) -> typing.Tuple[int, int, int]:
+    def params(self) -> typing.Tuple[int, int, int]:
         info = self._info
         # print(info)
         level_mul = self.RARITY_LEVEL_ATTRS_BONUS[info['rarity'] - 1]
@@ -165,12 +198,12 @@ class Card:
             rarity = self.rarity
             rarity = '★' * rarity + '☆' * (4 - rarity)
             skillLevel = self.skillLevel
-            skillLevel = 'x' * skillLevel + ' ' * (5 - skillLevel)
-            e1 = '√' if self.episode1 else '×'
-            e2 = '√' if self.episode2 else '×'
-            attrs = self.attrs
+            skillLevel = '12345'[:skillLevel] + ' ' * (5 - skillLevel)
+            e1 = '1' if self.episode1 else ' '
+            e2 = '2' if self.episode2 else ' '
+            attrs = self.params
             return (f'#{self.id:4} Lv.{self.level:2} {rarity} Skl.{skillLevel} '
-                    f'Episodes:{e1}{e2} ({attrs[0]:5}, {attrs[1]:5}, {attrs[2]:5}) {trained}')
+                    f'Epsd.{e1}{e2} Param.({attrs[0]:5}, {attrs[1]:5}, {attrs[2]:5}) {trained}')
         except KeyError:
             return 'Invalid card'
 
@@ -180,8 +213,166 @@ class Card:
     #            f'trainArt={int(self.trainedArt)})'
 
 
+class Item:
+    def __init__(
+            self, itemId=0,
+            band=(True,) * 5,
+            attribute=(True,) * 4,
+            param=(True,) * 3,
+            bonuses: typing.Tuple[Real, ...] = (0,),
+            level=0
+    ):
+        self.id = itemId
+        self._band = band
+        self._attribute = attribute
+        self._param = param
+        # if band & attr match -> add param
+        self._levelToBonus = bonuses
+        self.level = level
+
+    def getItemBonus(self, card: Card) -> typing.Tuple[Real, Real, Real]:
+        if not (self._band[card.band] and self._attribute[card.attribute]):
+            return 0, 0, 0
+        bonus = self._levelToBonus[self.level]
+        return tuple(bonus if param else 0. for param in self._param)
+
+    def __repr__(self):
+        return f"'Item {self.id}'"
+
+    @staticmethod
+    def getDefaultItems(items, bonusType, fromBestdori=False):
+        # TODO: bestdori: add 1 to levels
+        # items[type][group] = list(all items in group)
+        out = []
+
+        bonus1 = (0, 2, 2.5, 3, 3.5, 4, 4.5)
+        bonus1_half = (0, 1, 1.25, 1.5, 1.75, 2, 2.25)
+        bonus2 = (0, 6, 7, 8, 9, 10, 11)
+        bonus2_half = (0, 3, 3.5, 4, 4.5, 5, 5.5)
+        band = [[(i == x) for i in range(5)] for x in range(5)]
+        bandBonuses = []
+        lv = items.get('PoppinParty', [0] * 7)
+        bandBonuses.append([
+            Item(1, band=band[0], bonuses=bonus1, level=lv[0]),
+            Item(6, band=band[0], bonuses=bonus1, level=lv[1]),
+            Item(11, band=band[0], bonuses=bonus1, level=lv[2]),
+            Item(16, band=band[0], bonuses=bonus1, level=lv[3]),
+            Item(21, band=band[0], bonuses=bonus1, level=lv[4]),
+            Item(26, band=band[0], bonuses=bonus2, level=lv[5]),
+            Item(31, band=band[0], bonuses=bonus2, level=lv[6]),
+        ])
+        lv = items.get('Afterglow', [0] * 7)
+        bandBonuses.append([
+            Item(2, band=band[1], bonuses=bonus1, level=lv[0]),
+            Item(7, band=band[1], bonuses=bonus1, level=lv[1]),
+            Item(12, band=band[1], bonuses=bonus1, level=lv[2]),
+            Item(17, band=band[1], bonuses=bonus1, level=lv[3]),
+            Item(22, band=band[1], bonuses=bonus1, level=lv[4]),
+            Item(27, band=band[1], bonuses=bonus2, level=lv[5]),
+            Item(32, band=band[1], bonuses=bonus2, level=lv[6]),
+        ])
+        lv = items.get('PastelPalettes', [0] * 7)
+        bandBonuses.append([
+            Item(3, band=band[1], bonuses=bonus1, level=lv[0]),
+            Item(8, band=band[1], bonuses=bonus1, level=lv[1]),
+            Item(13, band=band[1], bonuses=bonus1, level=lv[2]),
+            Item(18, band=band[1], bonuses=bonus1, level=lv[3]),
+            Item(23, band=band[1], bonuses=bonus1, level=lv[4]),
+            Item(28, band=band[1], bonuses=bonus2, level=lv[5]),
+            Item(33, band=band[1], bonuses=bonus2, level=lv[6]),
+        ])
+        lv = items.get('Roselia', [0] * 7)
+        bandBonuses.append([
+            Item(4, band=band[1], bonuses=bonus1, level=lv[0]),
+            Item(9, band=band[1], bonuses=bonus1, level=lv[1]),
+            Item(14, band=band[1], bonuses=bonus1, level=lv[2]),
+            Item(19, band=band[1], bonuses=bonus1, level=lv[3]),
+            Item(24, band=band[1], bonuses=bonus1, level=lv[4]),
+            Item(29, band=band[1], bonuses=bonus2, level=lv[5]),
+            Item(34, band=band[1], bonuses=bonus2, level=lv[6]),
+        ])
+        lv = items.get('HelloHappyWorld', [0] * 7)
+        bandBonuses.append([
+            Item(5, band=band[1], bonuses=bonus1, level=lv[0]),
+            Item(10, band=band[1], bonuses=bonus1, level=lv[1]),
+            Item(15, band=band[1], bonuses=bonus1, level=lv[2]),
+            Item(20, band=band[1], bonuses=bonus1, level=lv[3]),
+            Item(25, band=band[1], bonuses=bonus1, level=lv[4]),
+            Item(30, band=band[1], bonuses=bonus2, level=lv[5]),
+            Item(35, band=band[1], bonuses=bonus2, level=lv[6]),
+        ])
+        lv = items.get('Everyone', [0] * 7)
+        if sum(lv) != 0:
+            bandBonuses.append([
+                Item(73, bonuses=bonus1_half, level=lv[0]),
+                Item(74, bonuses=bonus1_half, level=lv[1]),
+                Item(75, bonuses=bonus1_half, level=lv[2]),
+                Item(76, bonuses=bonus1_half, level=lv[3]),
+                Item(77, bonuses=bonus1_half, level=lv[4]),
+                Item(78, bonuses=bonus2_half, level=lv[5]),
+                Item(79, bonuses=bonus2_half, level=lv[6]),
+            ])
+        out.append(bandBonuses)
+
+        if bonusType == 1:
+            bonus3 = (0, 1, 3, 5, 7, 10)
+            bonus3_half = (0, 0.5, 1.5, 2.5, 3.5, 5)
+        elif bonusType == 2:
+            bonus3 = (0, 2, 4, 6, 8, 10, 12)
+            bonus3_half = (0, 1, 2, 3, 4, 5, 6)
+        else:
+            raise ValueError(f'Bonus type: {bonusType}')
+        attr = [[(i == x) for i in range(4)] for x in range(4)]
+        attributeBonuses = []
+        menu = items.get('Menu', [0] * 4)
+        plaza = items.get('Plaza', [0] * 4)
+        attributeBonuses.append([
+            Item(56, attribute=attr[0], bonuses=bonus3, level=menu[0]),
+            Item(70, attribute=attr[0], bonuses=bonus3, level=plaza[0]),
+        ])
+        attributeBonuses.append([
+            Item(57, attribute=attr[1], bonuses=bonus3, level=menu[0]),
+            Item(66, attribute=attr[1], bonuses=bonus3, level=plaza[0]),
+        ])
+        attributeBonuses.append([
+            Item(58, attribute=attr[2], bonuses=bonus3, level=menu[0]),
+            Item(67, attribute=attr[2], bonuses=bonus3, level=plaza[0]),
+        ])
+        attributeBonuses.append([
+            Item(60, attribute=attr[3], bonuses=bonus3, level=menu[0]),
+            Item(69, attribute=attr[3], bonuses=bonus3, level=plaza[0]),
+        ])
+        if len(menu) >= 5 and len(plaza) >= 5:
+            if menu[5] and plaza[5]:
+                attributeBonuses.append([
+                    Item(61, bonuses=bonus3_half, level=menu[5]),
+                    Item(71, bonuses=bonus3_half, level=plaza[5]),
+                ])
+        out.append(attributeBonuses)
+
+        bonus4 = (0, 8, 10, 12, 14, 16)
+        param = [[(i == x) for i in range(3)] for x in range(3)]
+        magazine = items.get('Magazine', None)
+        if magazine:
+            if fromBestdori or sum(magazine) != 0:
+                magazineBonuses = [
+                    [
+                        Item(80, param=param[0], bonuses=bonus4, level=magazine[0])
+                    ], [
+                        Item(81, param=param[1], bonuses=bonus4, level=magazine[1])
+                    ], [
+                        Item(82, param=param[2], bonuses=bonus4, level=magazine[2])
+                    ]
+                ]
+                out.append(magazineBonuses)
+
+        return out
+
+
 class Profile:
-    pass
+    def __init__(self):
+        self.cards: typing.List[Card] = []
+        self.items = []
 
 
 class _Base64Variant:
@@ -238,8 +429,15 @@ if __name__ == '__main__':
         # print(repr(_card))
         _o.append(_card.toBestdoriCompressedV1())
     print('Check: ' + str(''.join(_o) == _data))
+    request_manager.getManager().saveCacheIndex()
 
 # if __name__ == '__main__':
 #     _card = Card.fromBestdoriCompressedV1('04y0K')
 #     print(_card)
 #     request_manager.getManager().saveCacheIndex()
+
+if __name__ == '__main__':
+    print(Item.getDefaultItems(
+        {"PoppinParty": [5, 5, 5, 5, 5, 5, 5], "Afterglow": [5, 5, 5, 5, 5, 5, 5], "HelloHappyWorld": [5, 5, 5, 5, 5, 5, 5],
+         "PastelPalettes": [5, 5, 5, 5, 5, 5, 5], "Roselia": [5, 5, 5, 5, 5, 5, 5], "Everyone": [5, 5, 5, 5, 5, 5, 5],
+         "Magazine": [4, 4, 4], "Plaza": [5, 5, 5, 5], "Menu": [5, 5, 5, 5]}, 2))
