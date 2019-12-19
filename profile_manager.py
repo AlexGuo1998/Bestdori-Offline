@@ -153,7 +153,7 @@ class Card:
         return o1, o2, o3
 
     def toBestdoriCompressedV1(self):
-        cardId = _card.id
+        cardId = self.id
         if cardId >= 10000:
             cardId -= 6928
         elif cardId >= 3072:
@@ -207,10 +207,14 @@ class Card:
         except KeyError:
             return 'Invalid card'
 
-    # def __repr__(self):
-    #     return f'Card(cardId={self.id}, level={self.level}, skillLevel={self.skillLevel}, ' \
-    #            f'episodes=({int(self.episode1)}, {int(self.episode2)}), train={int(self.train)}, ' \
-    #            f'trainArt={int(self.trainedArt)})'
+    def __repr__(self):
+        return f'Card(cardId={self.id}, level={self.level}, skillLevel={self.skillLevel}, ' \
+               f'episodes=({int(self.episode1)}, {int(self.episode2)}), train={int(self.train)}, ' \
+               f'trainedArt={int(self.trainedArt)})'
+
+    def __eq__(self, other):
+        return ((self.id, self.level, self.skillLevel, self.episode1, self.episode2, self.train)
+                == (other.id, other.level, other.skillLevel, other.episode1, other.episode2, other.train))
 
 
 class Item:
@@ -236,12 +240,15 @@ class Item:
         bonus = self._levelToBonus[self.level]
         return tuple(bonus if param else 0. for param in self._param)
 
+    def __str__(self):
+        return f"'Item{self.id}, Lv.{self.level}'"
+
     def __repr__(self):
-        return f"'Item {self.id}'"
+        return f"Item({self.id}, level={self.level})"
 
     @staticmethod
     def getDefaultItems(items, bonusType, fromBestdori=False):
-        # TODO: bestdori: add 1 to levels
+        # bestdori: add 1 to levels
         # items[type][group] = list(all items in group)
         out = []
 
@@ -252,6 +259,7 @@ class Item:
         band = [[(i == x) for i in range(5)] for x in range(5)]
         bandBonuses = []
         lv = items.get('PoppinParty', [0] * 7)
+        if fromBestdori: lv = [_x + 1 for _x in lv]
         bandBonuses.append([
             Item(1, band=band[0], bonuses=bonus1, level=lv[0]),
             Item(6, band=band[0], bonuses=bonus1, level=lv[1]),
@@ -262,6 +270,7 @@ class Item:
             Item(31, band=band[0], bonuses=bonus2, level=lv[6]),
         ])
         lv = items.get('Afterglow', [0] * 7)
+        if fromBestdori: lv = [_x + 1 for _x in lv]
         bandBonuses.append([
             Item(2, band=band[1], bonuses=bonus1, level=lv[0]),
             Item(7, band=band[1], bonuses=bonus1, level=lv[1]),
@@ -272,6 +281,7 @@ class Item:
             Item(32, band=band[1], bonuses=bonus2, level=lv[6]),
         ])
         lv = items.get('PastelPalettes', [0] * 7)
+        if fromBestdori: lv = [_x + 1 for _x in lv]
         bandBonuses.append([
             Item(3, band=band[1], bonuses=bonus1, level=lv[0]),
             Item(8, band=band[1], bonuses=bonus1, level=lv[1]),
@@ -282,6 +292,7 @@ class Item:
             Item(33, band=band[1], bonuses=bonus2, level=lv[6]),
         ])
         lv = items.get('Roselia', [0] * 7)
+        if fromBestdori: lv = [_x + 1 for _x in lv]
         bandBonuses.append([
             Item(4, band=band[1], bonuses=bonus1, level=lv[0]),
             Item(9, band=band[1], bonuses=bonus1, level=lv[1]),
@@ -292,6 +303,7 @@ class Item:
             Item(34, band=band[1], bonuses=bonus2, level=lv[6]),
         ])
         lv = items.get('HelloHappyWorld', [0] * 7)
+        if fromBestdori: lv = [_x + 1 for _x in lv]
         bandBonuses.append([
             Item(5, band=band[1], bonuses=bonus1, level=lv[0]),
             Item(10, band=band[1], bonuses=bonus1, level=lv[1]),
@@ -301,8 +313,9 @@ class Item:
             Item(30, band=band[1], bonuses=bonus2, level=lv[5]),
             Item(35, band=band[1], bonuses=bonus2, level=lv[6]),
         ])
-        lv = items.get('Everyone', [0] * 7)
-        if sum(lv) != 0:
+        lv = items.get('Everyone', None)
+        if lv is not None:
+            if fromBestdori: lv = [_x + 1 for _x in lv]
             bandBonuses.append([
                 Item(73, bonuses=bonus1_half, level=lv[0]),
                 Item(74, bonuses=bonus1_half, level=lv[1]),
@@ -326,6 +339,9 @@ class Item:
         attributeBonuses = []
         menu = items.get('Menu', [0] * 4)
         plaza = items.get('Plaza', [0] * 4)
+        if fromBestdori:
+            menu = [_x + 1 for _x in menu]
+            plaza = [_x + 1 for _x in plaza]
         attributeBonuses.append([
             Item(56, attribute=attr[0], bonuses=bonus3, level=menu[0]),
             Item(70, attribute=attr[0], bonuses=bonus3, level=plaza[0]),
@@ -342,19 +358,19 @@ class Item:
             Item(60, attribute=attr[3], bonuses=bonus3, level=menu[0]),
             Item(69, attribute=attr[3], bonuses=bonus3, level=plaza[0]),
         ])
-        if len(menu) >= 5 and len(plaza) >= 5:
-            if menu[5] and plaza[5]:
-                attributeBonuses.append([
-                    Item(61, bonuses=bonus3_half, level=menu[5]),
-                    Item(71, bonuses=bonus3_half, level=plaza[5]),
-                ])
+        if len(menu) >= 5 and len(plaza) >= 5 and menu[5] and plaza[5]:
+            attributeBonuses.append([
+                Item(61, bonuses=bonus3_half, level=menu[5]),
+                Item(71, bonuses=bonus3_half, level=plaza[5]),
+            ])
         out.append(attributeBonuses)
 
         bonus4 = (0, 8, 10, 12, 14, 16)
         param = [[(i == x) for i in range(3)] for x in range(3)]
         magazine = items.get('Magazine', None)
-        if magazine:
-            if fromBestdori or sum(magazine) != 0:
+        if magazine is not None:
+            if fromBestdori: magazine = [_x + 1 for _x in magazine]
+            if sum(magazine) != 0:
                 magazineBonuses = [
                     [
                         Item(80, param=param[0], bonuses=bonus4, level=magazine[0])
@@ -370,9 +386,40 @@ class Item:
 
 
 class Profile:
-    def __init__(self):
+    def __init__(self, name=None, server=3):
+        self.name = name
+        self.server = server
         self.cards: typing.List[Card] = []
-        self.items = []
+        self.items: typing.List[typing.List[Item]] = []
+
+    @staticmethod
+    def loadFromBestdori(data: dict):
+        name = data['name']
+        server = data['server']
+        p = Profile(name, server)
+        compression = data.get('compression')
+        if compression != '1':
+            raise ValueError(f'Unsupported compression level {compression}')
+        cardData = data['data']
+        for i in range(0, len(cardData), 5):
+            card = Card.fromBestdoriCompressedV1(cardData[i:i + 5])
+            p.cards.append(card)
+        bonusType = 2 if server in (0, 2) else 1  # TODO temporary solution
+        items = data['items']
+        p.items = Item.getDefaultItems(items, bonusType, fromBestdori=True)
+        return p
+
+    def __str__(self):
+        return f'Profile {self.name} (Server {self.server}), {len(self.cards)} card(s)'
+
+    def __repr__(self):
+        cards = ',\n  '.join(repr(x) for x in self.cards)
+        items = '],\n  ['.join((',\n   '.join(repr(y) for y in x) for x in self.items))
+        return (
+            f"Profile({self.name!r}, server={self.server}) {{\n"
+            f"'cards': [\n  {cards}],\n"
+            f"'items': [\n  [{items}]]}}"
+        )
 
 
 class _Base64Variant:
@@ -421,23 +468,11 @@ class _CardDataManager:
 
 
 if __name__ == '__main__':
-    _data = '04y0K07o0M0Bo0M2Ko0K'
-    _o = []
-    for _i in range(0, len(_data), 5):
-        _card = Card.fromBestdoriCompressedV1(_data[_i:_i + 5])
-        print(_card)
-        # print(repr(_card))
-        _o.append(_card.toBestdoriCompressedV1())
-    print('Check: ' + str(''.join(_o) == _data))
-    request_manager.getManager().saveCacheIndex()
-
-# if __name__ == '__main__':
-#     _card = Card.fromBestdoriCompressedV1('04y0K')
-#     print(_card)
-#     request_manager.getManager().saveCacheIndex()
-
-if __name__ == '__main__':
-    print(Item.getDefaultItems(
-        {"PoppinParty": [5, 5, 5, 5, 5, 5, 5], "Afterglow": [5, 5, 5, 5, 5, 5, 5], "HelloHappyWorld": [5, 5, 5, 5, 5, 5, 5],
-         "PastelPalettes": [5, 5, 5, 5, 5, 5, 5], "Roselia": [5, 5, 5, 5, 5, 5, 5], "Everyone": [5, 5, 5, 5, 5, 5, 5],
-         "Magazine": [4, 4, 4], "Plaza": [5, 5, 5, 5], "Menu": [5, 5, 5, 5]}, 2))
+    d = {"name": "Alex", "server": 3, "compression": "1",
+         "data": "04y0K07o0M0Bo0M2Ko0K",
+         "items": {"Menu": [4, 4, 4, 4], "Plaza": [4, 4, 4, 4], "Roselia": [4, 4, 4, 4, 4, 4, 4],
+                   "Afterglow": [4, 4, 4, 4, 4, 4, 4], "PoppinParty": [4, 4, 4, 4, 4, 4, 4],
+                   "PastelPalettes": [4, 4, 4, 4, 4, 4, 4], "HelloHappyWorld": [4, 4, 4, 4, 4, 4, 4]}}
+    profile = Profile.loadFromBestdori(d)
+    print(repr(profile))
+    print(profile)
