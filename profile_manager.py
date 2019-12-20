@@ -86,6 +86,10 @@ class Card:
         return -1
 
     @property
+    def skillId(self) -> int:
+        return self._info['skillId']
+
+    @property
     def attribute(self) -> int:
         # 0, 1, 2, 3
         attribute = self._info['attribute']
@@ -390,7 +394,7 @@ class Profile:
         self.name = name
         self.server = server
         self.cards: typing.List[Card] = []
-        self.items: typing.List[typing.List[Item]] = []
+        self.items: typing.List[typing.List[typing.List[Item]]] = []
 
     @staticmethod
     def loadFromBestdori(data: dict):
