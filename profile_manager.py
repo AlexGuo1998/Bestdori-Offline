@@ -212,9 +212,9 @@ class Card:
                f'episodes=({int(self.episode1)}, {int(self.episode2)}), train={int(self.train)}, ' \
                f'trainedArt={int(self.trainedArt)})'
 
-    def __eq__(self, other):
-        return ((self.id, self.level, self.skillLevel, self.episode1, self.episode2, self.train)
-                == (other.id, other.level, other.skillLevel, other.episode1, other.episode2, other.train))
+    # def __eq__(self, other):
+    #     return ((self.id, self.level, self.skillLevel, self.episode1, self.episode2, self.train)
+    #             == (other.id, other.level, other.skillLevel, other.episode1, other.episode2, other.train))
 
 
 class Item:
@@ -473,6 +473,6 @@ if __name__ == '__main__':
          "items": {"Menu": [4, 4, 4, 4], "Plaza": [4, 4, 4, 4], "Roselia": [4, 4, 4, 4, 4, 4, 4],
                    "Afterglow": [4, 4, 4, 4, 4, 4, 4], "PoppinParty": [4, 4, 4, 4, 4, 4, 4],
                    "PastelPalettes": [4, 4, 4, 4, 4, 4, 4], "HelloHappyWorld": [4, 4, 4, 4, 4, 4, 4]}}
-    profile = Profile.loadFromBestdori(d)
-    print(repr(profile))
-    print(profile)
+    _profile = Profile.loadFromBestdori(d)
+    print(repr(_profile))
+    print(_profile)
