@@ -4,7 +4,7 @@
 # Description: Profile, card and items
 # Date:        2019/12/16
 # ==============================================
-
+import functools
 import json
 import typing
 from numbers import Real
@@ -57,6 +57,7 @@ class Card:
         self.trainedArt: bool = bool(trainedArt)
 
     @property
+    @functools.lru_cache()
     def _info(self) -> dict:
         return _CardDataManager.getCardInfo(self.id)
         # {'characterId': 1, 'rarity': 4, 'attribute': 'powerful', 'levelLimit': 50, 'resourceSetName': 'res001004',
@@ -74,6 +75,7 @@ class Card:
         return self._info['rarity']
 
     @property
+    @functools.lru_cache()
     def character(self) -> int:
         return self._info['characterId']
 
@@ -256,10 +258,10 @@ class Item:
         # items[type][group] = list(all items in group)
         out = []
 
-        bonus1 = (0, 2, 2.5, 3, 3.5, 4, 4.5)
-        bonus1_half = (0, 1, 1.25, 1.5, 1.75, 2, 2.25)
-        bonus2 = (0, 6, 7, 8, 9, 10, 11)
-        bonus2_half = (0, 3, 3.5, 4, 4.5, 5, 5.5)
+        bonus1 = (0, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045)
+        bonus1_half = (0, 0.01, 0.0125, 0.015, 0.0175, 0.02, 0.0225)
+        bonus2 = (0, 0.06, 0.07, 0.08, 0.09, 0.10, 0.11)
+        bonus2_half = (0, 0.03, 0.035, 0.04, 0.045, 0.05, 0.055)
         band = [[(i == x) for i in range(5)] for x in range(5)]
         bandBonuses = []
         lv = items.get('PoppinParty', [0] * 7)
@@ -332,11 +334,11 @@ class Item:
         out.append(bandBonuses)
 
         if bonusType == 1:
-            bonus3 = (0, 1, 3, 5, 7, 10)
-            bonus3_half = (0, 0.5, 1.5, 2.5, 3.5, 5)
+            bonus3 = (0, 0.01, 0.03, 0.05, 0.07, 0.10)
+            bonus3_half = (0, 0.005, 0.015, 0.025, 0.035, 0.05)
         elif bonusType == 2:
-            bonus3 = (0, 2, 4, 6, 8, 10, 12)
-            bonus3_half = (0, 1, 2, 3, 4, 5, 6)
+            bonus3 = (0, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12)
+            bonus3_half = (0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06)
         else:
             raise ValueError(f'Bonus type: {bonusType}')
         attr = [[(i == x) for i in range(4)] for x in range(4)]
@@ -369,7 +371,7 @@ class Item:
             ])
         out.append(attributeBonuses)
 
-        bonus4 = (0, 8, 10, 12, 14, 16)
+        bonus4 = (0, 0.08, 0.10, 0.12, 0.14, 0.16)
         param = [[(i == x) for i in range(3)] for x in range(3)]
         magazine = items.get('Magazine', None)
         if magazine is not None:
