@@ -43,16 +43,17 @@ class RequestManager:
         self.session = data.get('session')
         if not self.session:
             self.session = requests.Session()
+        self.session_anonymous = requests.Session()
         self.cacheControl: typing.Dict[str, CacheControl] = data.get('cache-control', {})
         self.cacheControlLock = None  # TODO
 
-    def get(self, path, cacheable=True, session=False, force=False):
+    def get(self, path, cacheable=True, session=False, forceReload=False):
         resourceName = self._pathToResourceName(path)
-        if cacheable and not force:
+        if cacheable and not forceReload:
             cacheControl = self.cacheControl.get(resourceName)
             if cacheControl is not None and cacheControl.path == path:
                 stale = cacheControl.touchAndTestStale()
-                print(stale)  # TODO
+                # print(stale)  # TODO
                 filename = self.cacheDir + resourceName
                 try:
                     with open(filename, 'rb') as f:
@@ -64,7 +65,7 @@ class RequestManager:
         if session:
             r = self.session.get(path)
         else:
-            r = requests.get(path)
+            r = self.session_anonymous.get(path)
         content = r.content
         if cacheable:
             # TODO parse header

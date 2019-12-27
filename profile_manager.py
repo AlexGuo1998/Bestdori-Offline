@@ -57,7 +57,6 @@ class Card:
         self.trainedArt: bool = bool(trainedArt)
 
     @property
-    @functools.lru_cache()
     def _info(self) -> dict:
         return _CardDataManager.getCardInfo(self.id)
         # {'characterId': 1, 'rarity': 4, 'attribute': 'powerful', 'levelLimit': 50, 'resourceSetName': 'res001004',
@@ -75,17 +74,20 @@ class Card:
         return self._info['rarity']
 
     @property
-    @functools.lru_cache()
     def character(self) -> int:
         return self._info['characterId']
+
+    characterToBand = [-1,
+                       0, 0, 0, 0, 0,
+                       1, 1, 1, 1, 1,
+                       2, 2, 2, 2, 2,
+                       3, 3, 3, 3, 3,
+                       4, 4, 4, 4, 4]
 
     @property
     def band(self) -> int:
         # 0, 1, 2, 3, 4
-        band = (self.character - 1) // 5
-        if 0 <= band <= 4:
-            return band
-        return -1
+        return self.characterToBand[self.character]
 
     @property
     def skillId(self) -> int:
@@ -244,7 +246,7 @@ class Item:
         if not (self._band[card.band] and self._attribute[card.attribute]):
             return 0, 0, 0
         bonus = self._levelToBonus[self.level]
-        return tuple(bonus if param else 0. for param in self._param)
+        return tuple(bonus if param else 0 for param in self._param)
 
     def __str__(self):
         return f"'Item{self.id}, Lv.{self.level}'"
@@ -462,7 +464,7 @@ class _CardDataManager:
     @classmethod
     def update(cls, force=False):
         manager = request_manager.getManager()
-        d = manager.get(cls.DATA_URL, force=force)
+        d = manager.get(cls.DATA_URL, forceReload=force)
         j = json.loads(d)
         data = {}
         for cardId_s in j:
